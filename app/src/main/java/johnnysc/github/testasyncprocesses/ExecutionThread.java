@@ -2,7 +2,6 @@ package johnnysc.github.testasyncprocesses;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.os.Environment;
 
 import java.io.BufferedInputStream;
 import java.io.FileOutputStream;
@@ -14,6 +13,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import static johnnysc.github.testasyncprocesses.Consts.IMAGE_URL;
+import static johnnysc.github.testasyncprocesses.Consts.VIDEO_PATH;
+import static johnnysc.github.testasyncprocesses.Consts.VIDEO_URL;
 
 /**
  * @author Asatryan on 10.09.17.
@@ -34,7 +37,7 @@ public class ExecutionThread extends Thread {
         Future futurePic = service.submit(new Callable<Bitmap>() {
             @Override
             public Bitmap call() throws Exception {
-                InputStream stream = new URL("https://www.androidcentral.com/sites/androidcentral.com/files/styles/w550h500/public/wallpapers/batdroid-blj.jpg?itok=9gJ6EVIk").openStream();
+                InputStream stream = new URL(IMAGE_URL).openStream();
                 return BitmapFactory.decodeStream(stream);
             }
         });
@@ -42,15 +45,15 @@ public class ExecutionThread extends Thread {
         Future futureVideo = service.submit(new Callable() {
             @Override
             public Object call() throws Exception {
-                InputStream stream = new URL("http://www.sample-videos.com/video/mp4/720/big_buck_bunny_720p_5mb.mp4").openStream();
+                InputStream stream = new URL(VIDEO_URL).openStream();
                 InputStream inputStream = new BufferedInputStream(stream, 8192);
-                OutputStream outputStream = new FileOutputStream(Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_MOVIES).getPath()+"/cartoon.mp4");
+                OutputStream outputStream = new FileOutputStream(VIDEO_PATH);
 
                 byte data[] = new byte[1024];
                 int count;
                 while ((count = inputStream.read(data)) != -1) {
                     outputStream.write(data, 0, count);
+                    mCustomCallBack.incrementProgress(count);
                 }
                 outputStream.flush();
                 outputStream.close();
@@ -61,24 +64,28 @@ public class ExecutionThread extends Thread {
 
         try {
             Bitmap bitmap = (Bitmap) futurePic.get();
-            mCustomCallBack.callingBack(bitmap);
+            mCustomCallBack.showImage(bitmap);
         } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
+            mCustomCallBack.showError();
         }
 
         try {
             futureVideo.get();
-            mCustomCallBack.showToast();
+            mCustomCallBack.showVideo();
         } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
+            mCustomCallBack.showError();
         }
     }
 
 
     public interface CustomCallBack {
 
-        void callingBack(Bitmap bitmap);
+        void showImage(Bitmap bitmap);
 
-        void showToast();
+        void showVideo();
+
+        void incrementProgress(int increment);
+
+        void showError();
     }
 }
